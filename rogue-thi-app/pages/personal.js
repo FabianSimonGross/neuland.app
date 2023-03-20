@@ -147,7 +147,7 @@ export default function Personal () {
 
             </ListGroup.Item>
 
-            <ListGroup.Item action onClick={() => window.open('/grades', '_self')}>
+            <ListGroup.Item action onClick={() => router.push('/grades')}>
               <div className={styles.interaction_icon}>
                 <span className="text-muted">
                   {grades && missingGrades && grades.length + '/' + (grades.length + missingGrades.length)}
@@ -157,10 +157,10 @@ export default function Personal () {
               </div>
               <span className="text-muted">
                 {ects !== null && ects + ' ECTS'}
-                {average && ' · '}
-                {average && '∅ ' + average.result}
-                {average && average?.missingWeight === 1 && ' (' + average.missingWeight + ' Gewichtung fehlt)'}
-                {average && average?.missingWeight > 1 && ' (' + average.missingWeight + ' Gewichtungen fehlen)'}
+                {!isNaN(average?.result) && ' · '}
+                {!isNaN(average?.result) && '∅ ' + average.result.toFixed(2).toString().replace('.', ',')}
+                {average?.missingWeight === 1 && ' (' + average.missingWeight + ' Gewichtung fehlt)'}
+                {average?.missingWeight > 1 && ' (' + average.missingWeight + ' Gewichtungen fehlen)'}
               </span>
             </ListGroup.Item>
           </ListGroup>

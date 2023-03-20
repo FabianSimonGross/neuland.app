@@ -54,7 +54,7 @@ export default function FoodCard () {
           ?.meals
           .filter(x => x.category !== 'Suppe' && selectedRestaurants.includes(x.restaurant.toLowerCase()))
 
-        todayEntries.sort((a, b) => userMealRating(b) - userMealRating(a))
+        todayEntries?.sort((a, b) => userMealRating(b) - userMealRating(a))
 
         if (!todayEntries) {
           setFoodEntries([])
@@ -94,7 +94,7 @@ export default function FoodCard () {
           {foodError &&
             <ListGroup.Item>
               Fehler beim Abruf des Speiseplans.<br />
-              Irgendetwas scheint kaputt zu sein. :(
+              Irgendetwas scheint kaputt zu sein.
             </ListGroup.Item>}
         </ListGroup>
       </ReactPlaceholder>
