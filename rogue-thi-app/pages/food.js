@@ -3,9 +3,10 @@ import React, { useContext, useEffect, useState } from 'react'
 import Button from 'react-bootstrap/Button'
 import ListGroup from 'react-bootstrap/ListGroup'
 import Modal from 'react-bootstrap/Modal'
+import Nav from 'react-bootstrap/Nav'
 import ReactPlaceholder from 'react-placeholder'
 
-import { faChevronLeft, faChevronRight, faExclamationTriangle, faFilter, faThumbsUp } from '@fortawesome/free-solid-svg-icons'
+import { faChevronLeft, faChevronRight, faExclamationTriangle, faFilter, faThumbsUp, faUtensils } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 import AppBody from '../components/page/AppBody'
@@ -14,12 +15,12 @@ import AppNavbar from '../components/page/AppNavbar'
 import AppTabbar from '../components/page/AppTabbar'
 
 import { USER_EMPLOYEE, USER_GUEST, USER_STUDENT, useUserKind } from '../lib/hooks/user-kind'
-import { WORD_NEXT_WEEK, WORD_THIS_WEEK, buildLinedWeekdaySpan } from '../lib/date-utils'
+import { buildLinedWeekdaySpan, getAdjustedDay, getFriendlyWeek } from '../lib/date-utils'
 import FilterFoodModal from '../components/modal/FilterFoodModal'
 import { FoodFilterContext } from './_app'
 import { loadFoodEntries } from '../lib/backend-utils/food-utils'
 
-import SwipeableTabs, { SwipeableTab } from '../components/SwipeableTabs'
+import { SwipeableTab } from '../components/SwipeableTabs'
 import allergenMap from '../data/allergens.json'
 import flagMap from '../data/mensa-flags.json'
 import styles from '../styles/Mensa.module.css'
@@ -48,8 +49,10 @@ export default function Mensa () {
   } = useContext(FoodFilterContext)
   const [currentFoodDays, setCurrentFoodDays] = useState(null)
   const [futureFoodDays, setFutureFoodDays] = useState(null)
+  const [currentDay, setCurrentDay] = useState(0)
+  const [futureDay, setFutureDay] = useState(0)
   const [showMealDetails, setShowMealDetails] = useState(null)
-  const [page, setPage] = useState(0)
+  const [week, setWeek] = useState(0)
   const userKind = useUserKind()
 
   useEffect(() => {
@@ -57,15 +60,10 @@ export default function Mensa () {
       try {
         const days = await loadFoodEntries(selectedRestaurants)
 
-        /**
-         * new Date(days[0].timestamp).getDay()
-         * api returns full next 2 weeks on weekends, so just `new Date()`
-         * to calculate the days till friday would be wrong (higher than 5)
-         * */
-        const daysTillFriday = days?.length > 0 ? (5 - new Date(days[0].timestamp).getDay() + 1) : 0
+        setCurrentFoodDays(days.slice(0, 5))
+        setFutureFoodDays(days?.slice(5, days.length))
 
-        setCurrentFoodDays(days.slice(0, daysTillFriday))
-        setFutureFoodDays(days?.slice(daysTillFriday, days.length))
+        setCurrentDay(getAdjustedDay(new Date()).getDay() - 1)
       } catch (e) {
         console.error(e)
         alert(e)
@@ -192,9 +190,14 @@ export default function Mensa () {
     const mensaSoups = day.meals.filter(x => x.restaurant === 'Mensa' && x.category === 'Suppe')
     const mensaFood = day.meals.filter(x => x.restaurant === 'Mensa' && x.category !== 'Suppe')
     const reimanns = day.meals.filter(x => x.restaurant === 'Reimanns')
+    const canisius = day.meals.filter(x => x.restaurant === 'Canisius')
+    const canisiusSalads = day.meals.filter(x => x.restaurant === 'Canisius' && x.category === 'Salat')
+    const canisiusFood = day.meals.filter(x => x.restaurant === 'Canisius' && x.category !== 'Salat')
+
+    const noData = mensa.length === 0 && reimanns.length === 0 && canisius.length === 0
 
     return (
-      <SwipeableTab title={buildLinedWeekdaySpan(day.timestamp)} key={key}>
+      <SwipeableTab key={key} >
         {mensa.length > 0 && (
           <>
             <h4 className={styles.kindHeader}>Mensa</h4>
@@ -229,15 +232,43 @@ export default function Mensa () {
             </ListGroup>
           </>
         )}
+
+        {canisius.length > 0 && (
+          <>
+            <h4 className={styles.kindHeader}>Canisiuskonvikt</h4>
+            {canisiusFood.length > 0 && (
+              <>
+                {canisiusSalads.length > 0 && (
+                  <h5 className={styles.kindHeader}>Gerichte</h5>
+                )}
+                <ListGroup>
+                  {canisiusFood.map((meal, idx) => renderMealEntry(meal, `food-${idx}`))}
+                </ListGroup>
+              </>
+            )}
+            {canisiusSalads.length > 0 && (
+              <>
+                {canisiusFood.length > 0 && (
+                  <h5 className={styles.kindHeader}>Salate</h5>
+                )}
+                <ListGroup>
+                  {canisiusSalads.map((meal, idx) => renderMealEntry(meal, `soup-${idx}`))}
+                </ListGroup>
+              </>
+            )}
+          </>
+        )}
+
+        {noData && (
+          <div className={styles.noMealInfo}>
+            <FontAwesomeIcon icon={faUtensils} size="xl" style={ { marginBottom: '15px' } }/>
+            <br />
+            Keine Daten verfügbar
+          </div>
+        )}
       </SwipeableTab>
     )
   }
-
-  const dayFiller = Array.from({ length: 5 - currentFoodDays?.length }, (_, i) => i).map((x, idx) => {
-    const day = new Date()
-    day.setDate(day.getDate() + idx)
-    return { title: buildLinedWeekdaySpan(day), key: idx }
-  })
 
   return (
     <AppContainer>
@@ -249,27 +280,22 @@ export default function Mensa () {
 
       <AppBody>
         <div className={styles.weekSelector}>
-          <Button className={styles.prevWeek} variant="link" onClick={() => setPage(0)} disabled={page === 0}>
+          <Button className={styles.prevWeek} variant="link" onClick={() => setWeek(0)} disabled={week === 0}>
             <FontAwesomeIcon title="Woche zurück" icon={faChevronLeft} />
           </Button>
-          <div className={styles.currentWeek}>
-            {page === 0 && WORD_THIS_WEEK}
-            {page === 1 && WORD_NEXT_WEEK}
+          <div className={styles.weekText}>
+            {week === 0 && getFriendlyWeek(new Date(currentFoodDays?.[0]?.timestamp))}
+            {week === 1 && getFriendlyWeek(new Date(futureFoodDays?.[0]?.timestamp))}
           </div>
-          <Button className={styles.nextWeek} variant="link" onClick={() => setPage(1)} disabled={page === 1 || futureFoodDays?.length === 0}>
+          <Button className={styles.nextWeek} variant="link" onClick={() => setWeek(1)} disabled={week === 1}>
             <FontAwesomeIcon title="Woche vor" icon={faChevronRight} />
           </Button>
         </div>
 
         <ReactPlaceholder type="text" rows={20} ready={currentFoodDays && futureFoodDays}>
-          <SwipeableViews index={page} onChangeIndex={idx => setPage(idx)}>
-            <SwipeableTabs className={styles.tab} fillers={dayFiller}>
-              {currentFoodDays && currentFoodDays.map((day, idx) => renderMealDay(day, idx))}
-            </SwipeableTabs>
-
-            <SwipeableTabs className={styles.tab}>
-              {futureFoodDays && futureFoodDays.map((day, idx) => renderMealDay(day, idx))}
-            </SwipeableTabs>
+          <SwipeableViews index={week} onChangeIndex={idx => setWeek(idx)}>
+            <WeekTab foodEntries={currentFoodDays} index={currentDay} setIndex={setCurrentDay} />
+            <WeekTab foodEntries={futureFoodDays} index={futureDay} setIndex={setFutureDay} />
           </SwipeableViews>
         </ReactPlaceholder>
 
@@ -392,4 +418,27 @@ export default function Mensa () {
       <AppTabbar/>
     </AppContainer>
   )
+
+  /**
+   * Renders the week tab.
+   * @param {Array} foodEntries Array of food entries
+   * @param {number} index Index of the currently selected tab
+   * @param {function} setIndex Callback to set the index
+   * @returns {JSX.Element}
+   */
+  function WeekTab ({ foodEntries, index, setIndex }) {
+    return <div className={styles.tab}>
+      <Nav variant="pills" activeKey={index.toString()} onSelect={key => setIndex(parseInt(key))}>
+        {foodEntries && foodEntries.map((child, idx) => <Nav.Item key={idx}>
+          <Nav.Link eventKey={idx.toString()} className={`${index === idx ? styles.active : ''} ${child.meals.length === 0 ? styles.noMeals : ''}`}>
+            {buildLinedWeekdaySpan(child.timestamp)}
+          </Nav.Link>
+        </Nav.Item>
+        )}
+      </Nav>
+      <SwipeableViews index={index} onChangeIndex={idx => setIndex(idx)}>
+        {foodEntries && foodEntries.map((day, idx) => renderMealDay(day, idx))}
+      </SwipeableViews>
+    </div>
+  }
 }

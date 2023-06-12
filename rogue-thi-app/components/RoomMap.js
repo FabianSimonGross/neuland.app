@@ -9,6 +9,7 @@ import Form from 'react-bootstrap/Form'
 import { AttributionControl, CircleMarker, FeatureGroup, LayerGroup, LayersControl, MapContainer, Polygon, Popup, TileLayer } from 'react-leaflet'
 
 import { NoSessionError, UnavailableSessionError } from '../lib/backend/thi-session-handler'
+import { USER_GUEST, useUserKind } from '../lib/hooks/user-kind'
 import { filterRooms, getNextValidDate } from '../lib/backend-utils/rooms-utils'
 import { formatFriendlyTime, formatISODate, formatISOTime } from '../lib/date-utils'
 import { useLocation } from '../lib/hooks/geolocation'
@@ -50,6 +51,7 @@ export default function RoomMap ({ highlight, roomData }) {
   const router = useRouter()
   const searchField = useRef()
   const location = useLocation()
+  const userKind = useUserKind()
   const [searchText, setSearchText] = useState(highlight ? highlight.toUpperCase() : '')
   const [availableRooms, setAvailableRooms] = useState(null)
 
@@ -125,7 +127,7 @@ export default function RoomMap ({ highlight, roomData }) {
       }
     }
     load()
-  }, [router, highlight])
+  }, [router, highlight, userKind])
 
   /**
    * Removes focus from the search.
@@ -220,11 +222,23 @@ export default function RoomMap ({ highlight, roomData }) {
           isInvalid={filteredRooms.length === 0}
           ref={searchField}
         />
-        <Link href="/rooms/search">
-          <a className={styles.linkToSearch}>
-            Stattdessen nach Zeitraum suchen
-          </a>
-        </Link>
+        <div className={styles.links}>
+          <Link href="/rooms/search">
+            <a className={styles.linkToSearch}>
+              Erweiterte Suche
+            </a>
+          </Link>
+          {userKind !== USER_GUEST &&
+            <>
+              <> · </>
+              <Link href="/rooms/suggestions">
+                <a className={styles.linkToSearch}>
+                  Automatische Vorschläge
+                </a>
+              </Link>
+            </>
+          }
+        </div>
       </Form>
 
       <MapContainer
