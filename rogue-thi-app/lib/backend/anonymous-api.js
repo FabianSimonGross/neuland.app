@@ -6,7 +6,7 @@ import packageInfo from '../../package.json'
 const CACHE_NAMESPACE = 'thi-api-client'
 const CACHE_TTL = 10 * 60 * 1000
 
-const ENDPOINT_MODE = process.env.NEXT_PUBLIC_THI_API_MODE || 'websocket-proxy'
+const ENDPOINT_MODE = process.env.NEXT_PUBLIC_THI_API_MODE || 'direct'
 const ENDPOINT_HOST = 'hiplan.thi.de'
 const ENDPOINT_URL = '/webservice/zits_s_40_test/index.php'
 const PROXY_URL = process.env.NEXT_PUBLIC_PROXY_URL
