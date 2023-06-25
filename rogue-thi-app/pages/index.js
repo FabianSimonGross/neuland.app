@@ -5,13 +5,14 @@ import AppContainer from '../components/page/AppContainer'
 import AppNavbar from '../components/page/AppNavbar'
 import AppTabbar from '../components/page/AppTabbar'
 
-import { useDashboard } from '../lib/hooks/dashboard'
-
-import styles from '../styles/Home.module.css'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faPen } from '@fortawesome/free-solid-svg-icons'
-import { ShowDashboardModal } from './_app'
+import { DashboardContext, ShowDashboardModal } from './_app'
 import DashboardModal from '../components/modal/DashboardModal'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+
+import { faPen } from '@fortawesome/free-solid-svg-icons'
+import { serverSideTranslations } from 'next-i18next/serverSideTranslations'
+import styles from '../styles/Home.module.css'
+import { useTranslation } from 'next-i18next'
 
 /**
  * Main page.
@@ -23,13 +24,15 @@ export default function Home () {
   const {
     shownDashboardEntries,
     hideDashboardEntry
-  } = useDashboard()
+  } = useContext(DashboardContext)
+
+  const { t } = useTranslation('common')
 
   return (
     <AppContainer>
       <AppNavbar title="neuland.app" showBack={false}>
         <AppNavbar.Button onClick={() => setShowDashboardModal(true)}>
-          <FontAwesomeIcon title="Personalisieren" icon={faPen} fixedWidth />
+          <FontAwesomeIcon title={t('dashboard.orderModal.icons.personalize')} icon={faPen} fixedWidth />
         </AppNavbar.Button>
       </AppNavbar>
 
@@ -44,3 +47,13 @@ export default function Home () {
     </AppContainer>
   )
 }
+
+export const getStaticProps = async ({ locale }) => ({
+  props: {
+    ...(await serverSideTranslations(locale ?? 'en', [
+      'dashboard',
+      'mobility',
+      'common'
+    ]))
+  }
+})
